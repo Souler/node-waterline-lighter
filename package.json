@@ -1,7 +1,7 @@
 {
   "name": "waterline-lighter",
   "version": "0.0.1",
-  "description": "Easy Waterline bootstraper for loading all the models in a given directory",
+  "description": "Simple Waterline bootstraper for loading all the models in a given directory",
   "main": "index.js",
   "scripts": {
     "test": "mocha test.js"
