@@ -1,0 +1,32 @@
+{
+  "name": "waterline-lighter",
+  "version": "0.0.1",
+  "description": "Easy Waterline bootstraper for loading all the models in a given directory",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Souler/node-waterline-lighter.git"
+  },
+  "keywords": [
+    "waterline",
+    "bootstrap",
+    "models",
+    "init",
+    "initialize",
+    "promise"
+  ],
+  "author": "Souler <soulerhyd@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Souler/node-waterline-lighter/issues"
+  },
+  "homepage": "https://github.com/Souler/node-waterline-lighter#readme",
+  "dependencies": {
+    "bluebird": "^3.3.1",
+    "lodash": "^4.3.0",
+    "waterline": "^0.11.0"
+  }
+}
