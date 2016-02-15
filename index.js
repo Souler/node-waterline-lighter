@@ -25,11 +25,11 @@ const defaultConfig = {
     }
 }
 
-module.exports = function(config, cb) {
-    if (_.isString(config))
-        config = { directory: config }
+module.exports = function(_config, cb) {
+    if (_.isString(_config))
+        _config = { directory: _config }
 
-    if (!config.directory) {
+    if (!_config.directory) {
         let err = TypeError('First argument must be the path to the models directory or an object with a directory attribute')
         if (_.isFunction(cb))
             return cb(err)
@@ -38,16 +38,16 @@ module.exports = function(config, cb) {
     }
 
     let orm = new Waterline()
-    let conf = _.assign({}, defaultConfig, config)
-    let ormConfig = _.omit(conf, [ 'directory', 'target' ])
+    let config = _.assign({}, defaultConfig, _config)
+    let ormConfig = _.omit(config, [ 'directory', 'target' ])
     let ormInitialize = Promise.promisify(orm.initialize)
 
-    return readdir(conf.directory)
+    return readdir(config.directory)
     .then((files) => (
         files
         .filter((f) => (/\.js$/.test(f)))
         .map((f) => {
-            let file = path.join(conf.directory, f)
+            let file = path.join(config.directory, f)
             let name = path.basename(file, '.js')
             let model = require(file)
             if (!model.connection)
@@ -61,12 +61,14 @@ module.exports = function(config, cb) {
     )
     .then(() => (ormInitialize(ormConfig)))
     .then((models) => {
-        if (conf.target !== false) // Inject in the target if available
-            _.assign(conf.target, _.pick(models, [ 'models', 'connections' ]))
+        let result = _.assign({ orm, config }, models)
+
+        if (config.target !== false) // Inject in the target if available
+            _.assign(config.target, _.pick(result, [ 'models', 'connections' ]))
 
         if (_.isFunction(cb))
-            return cb(null, models)
+            return cb(null, result)
         else
-            return models
+            return result
     })
 }
