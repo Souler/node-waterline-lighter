@@ -1,15 +1,18 @@
+'use strict'
 const fs        = require('fs')
   ,   path      = require('path')
   ,   _         = require('lodash')
   ,   Promise   = require('bluebird')
   ,   Waterline = require('waterline')
+  ,   memory    = null
+  ,   disk      = null
   ,   readdir   = Promise.promisify(fs.readdir)
 
 // Optional dependencies
 try {
-    const memory = require('sails-memory')
-      ,   disk   = require('sails-disk')
-}
+    memory = require('sails-memory')
+    disk   = require('sails-disk')
+} catch(e) {}
 
 const defaultConfig = {
     directory: null,
@@ -58,7 +61,7 @@ module.exports = function(_config, cb) {
         })
         .map(Waterline.Collection.extend)
         .map(orm.loadCollection)        
-    )
+    ))
     .then(() => (ormInitialize(ormConfig)))
     .then((models) => {
         let result = _.assign({ orm, config }, models)
