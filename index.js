@@ -48,13 +48,14 @@ Waterline.Lighter = function(_config, cb) {
     let config = _.assign({}, defaultConfig, _config)
     let ormConfig = _.omit(config, [ 'directory', 'target' ])
     let ormInitialize = Promise.promisify(orm.initialize, { context: orm })
+    let dir = path.join(path.dirname(module.parent.filename), config.directory)
 
-    return readdir(config.directory)
+    return readdir(dir)
     .then((files) => {
         let p = files
         .filter((f) => (/\.js$/.test(f)))
         .map((f) => {
-            let file = path.join(config.directory, f)
+            let file = path.join(dir, f)
             let name = path.basename(file, '.js')
             let model = require(file)
             if (!model.connection)
