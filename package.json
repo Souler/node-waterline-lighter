@@ -33,13 +33,29 @@
     "bluebird": "^3.3.1",
     "codependency": "^0.1.4",
     "lodash": "^4.3.0",
-    "object-hash": "^1.1.2"
+    "object-hash": "^1.1.2",
+    "snake-case": "^1.1.2"
   },
   "peerDependencies": {
     "waterline": "*"
   },
   "optionalPeerDependencies": {
+    "sails-postgresql": "*",
+    "sails-mysql": "*",
+    "sails-mongo": "*",
+    "sails-memory": "*",
     "sails-disk": "*",
-    "sails-memory": "*"
+    "sails-sqlserver": "*",
+    "sails-redis": "*",
+    "sails-riak": "*",
+    "sails-irc": "*",
+    "sails-twitter": "*",
+    "sails-jsdom": "*",
+    "sails-neo4j": "*",
+    "sails-orientdb": "*",
+    "sails-arangodb": "*",
+    "sails-cassandra": "*",
+    "sails-graphql": "*",
+    "sails-sol": "*"
   }
 }

@@ -4,34 +4,42 @@ const fs        = require('fs')
   ,   path      = require('path')
   ,   _         = require('lodash')
   ,   objHash   = require('object-hash')
+  ,   case      = require('snake-case')
   ,   Promise   = require('bluebird')
   ,   Waterline = require('waterline')
+  ,   peer      = require('codependency').register(module)
   ,   readdir   = Promise.promisify(fs.readdir)
 
-// Optional dependencies
-const peer   = require('codependency').register(module)
-  ,   disk   = peer('sails-disk', { optional: true })
-  ,   memory = peer('sails-memory', { optional: true })
+const adapters = [
+    'sails-postgresql',
+    'sails-mysql',
+    'sails-mongo',
+    'sails-memory',
+    'sails-disk',
+    'sails-sqlserver',
+    'sails-redis',
+    'sails-riak',
+    'sails-irc',
+    'sails-twitter',
+    'sails-jsdom',
+    'sails-neo4j',
+    'sails-orientdb',
+    'sails-arangodb',
+    'sails-cassandra',
+    'sails-graphql',
+    'sails-solr'
+]
 
-const defaultConfig = {
-    directory: null,
-    target: global,
-    adapters: {},
-    connections: {
-        default: {
-            adapter: null
-        }
-    }
-}
+adapters.forEach((a) => {
+    let adapter = peer(a, { optional: true })
+    let name = a.replace(/^sails\-/, '')
+    if (adapter != null)
+        defaultConfig.adapters[name] = adapter
+})
 
 if (memory != null) {
     defaultConfig.adapters['memory'] = memory
     defaultConfig.connections.default.adapter = 'memory'
-}
-
-if (disk != null) {
-    defaultConfig.adapters['disk'] = disk
-    defaultConfig.connections.default.adapter = 'disk'
 }
 
 const ormCache = {}
@@ -56,9 +64,9 @@ const WaterlineLighter = function(_config, cb) {
 
     let orm = new Waterline()
     let config = _.assign({}, defaultConfig, _config)
-    let ormConfig = _.omit(config, [ 'directory', 'target' ])
+    let ormConfig = _.omit(config, [ 'dir', 'directory', 'target', 'adapter' ])
     let ormInitialize = Promise.promisify(orm.initialize, { context: orm })
-    let dir = path.join(path.dirname(module.parent.filename), config.directory)
+    let dir = path.join(path.dirname(module.parent.filename), config.directory || config.dir)
 
     return readdir(dir)
     .then((files) => {
@@ -71,7 +79,7 @@ const WaterlineLighter = function(_config, cb) {
             if (!model.connection)
                 model.connection = 'default'
             if (!model.identity)
-                model.identity = name
+                model.identity = case(name)
             return model
         })
         .map((m) => (Waterline.Collection.extend(m)))
@@ -104,9 +112,11 @@ const WaterlineLighter = function(_config, cb) {
 WaterlineLighter.middleware = function(config) {
     return function(req, res, next) {
         let app = req.app
-        if (!app.models && !app.connections)
-            WaterlineLighter(_.assign({}, config, { target: app }), next)
-        else
+        if (!app.models && !app.connections) {
+            WaterlineLighter(_.assign({}, config, { target: app }))
+            .then(() => next)
+            .catch(next)
+        } else
             next()
     }
 }
