@@ -1,7 +1,9 @@
 'use strict'
+
 const fs        = require('fs')
   ,   path      = require('path')
   ,   _         = require('lodash')
+  ,   objHash   = require('object-hash')
   ,   Promise   = require('bluebird')
   ,   Waterline = require('waterline')
   ,   readdir   = Promise.promisify(fs.readdir)
@@ -32,7 +34,9 @@ if (disk != null) {
     defaultConfig.connections.default.adapter = 'disk'
 }
 
-Waterline.Lighter = function(_config, cb) {
+const ormCache = {}
+
+const WaterlineLighter = function(_config, cb) {
     if (_.isString(_config))
         _config = { directory: _config }
 
@@ -43,6 +47,12 @@ Waterline.Lighter = function(_config, cb) {
         else
             return Promise.reject(err)
     }
+
+    let hash = objHash(_config)
+    let cached = ormCache[hash]
+
+    if (cached)
+        return Promise.resolve(cached)
 
     let orm = new Waterline()
     let config = _.assign({}, defaultConfig, _config)
@@ -76,6 +86,8 @@ Waterline.Lighter = function(_config, cb) {
         if (config.target !== false) // Inject in the target if available
             _.assign(config.target, _.pick(result, [ 'models', 'connections' ]))
 
+        ormCache[hash] = result
+
         if (_.isFunction(cb))
             return cb(null, result)
         else
@@ -89,4 +101,16 @@ Waterline.Lighter = function(_config, cb) {
     })
 }
 
-module.exports = Waterline.Lighter
+WaterlineLighter.middleware = function(config) {
+    return function(req, res, next) {
+        let app = req.app
+        if (!app.models && !app.connections)
+            WaterlineLighter(_.assign({}, config, { target: app }), next)
+        else
+            next()
+    }
+}
+
+module.exports = WaterlineLighter
+Waterline.Lighter = WaterlineLighter
+Waterline.initialize = WaterlineLighter
