@@ -1,19 +1,21 @@
+![image_squidhome@2x.png](http://i.imgur.com/RIvu9.png)
+
 # node-waterline-lighter
 Simple Waterline bootstraper for loading all the models in a given directory
 
 ## Introduction
 How many times have you written/copy&pasted this code for initing your waterline
 instace?
-```node
+```js
 fs
-  .readdirSync(__dirname)
-  .filter(function(file) {
+.readdirSync(__dirname)
+.filter(function(file) {
     return (file.indexOf(".") !== 0) && (file !== "index.js");
-  })
-  .forEach(function(file) {
+})
+.forEach(function(file) {
     var model = require(path.join(__dirname, file));
     orm.loadCollection(model);
-  });
+});
 ```
 I found myself writing it more than once, so I decided to write this, hopefully
 it will save some time to someone else apart from me in the future.
@@ -26,16 +28,17 @@ correctly initialized.
 
 ## waterlineLighter(config, [cb])
 ### config
-Config can be either a *String* or an *Object*.
-* If a *String*, it is assumed it points to the directory where waterline should
+Config can be either a **String* or an **Object**.
+* If a **String**, it is assumed it points to the directory where waterline should
 load the models from.
-* If an *Object*:
-	* *directory*: String pointing to the directory where the model definitions are at.
-	* [*target*]: Object where to store `models` and `connections` after orm is
-	inited. This is useful when used with an `Express` instance. By default, `models`
-	and `connections` are injected into `global` object. If you want to *disable* this
-	feature and dont inject it anywhere, set `target` to *false*.
-	* Any option else will be passed to the `Waterline#initialize` function.
+* If an **Object**:
+    * **directory**[*String*]: pointing to the directory where the model definitions are at.
+        It can also be named *dir*.
+    * **target**[*Object*] (optional): where to store `models` and `connections` after orm is
+        inited. This is useful when used with an `Express` instance. Defaults to `global`.
+        If you want to **disable** this feature and dont inject it anywhere, set `target`
+        to **false**.
+    * Any option else will be passed to the `Waterline#initialize` function.
 
 ### cb
 Standard node finish callback with `err` and `result` as arguments passed.
@@ -63,22 +66,69 @@ Lets assume we have a project structure as follows
 ```
 
 ### Basic
-```node
-var waterlineLighter = require('waterline-lighter')
-waterlineLighter('./models')
+#### index.js
+```js
+var WaterlineLighter = require('waterline-lighter')
+WaterlineLighter('./models')
 .then(function(waterline) {
-	waterline.orm 			// would be waterline instance created by `new Waterline()`
-	waterline.config 		// config passed to orm.initialize (with some extra opts)
-	waterline.models 		// models loaded on the orm after inited
-	waterline.connections 	// connections used by the orm after inited
-	// The module also loads the models and collections into the global object
-	global.models 			// same as waterline.models
-	global.connections 		// same as waterline.connections
+    waterline.orm           // waterline instance created by `new Waterline()`
+    waterline.config        // config passed to orm.initialize (with some extra opts)
+    waterline.models        // models loaded on the orm after inited
+    waterline.connections   // connections used by the orm after inited
+    // The module also loads the models and collections into the global object
+    global.models           // same as waterline.models
+    global.connections      // same as waterline.connections
 })
 .then(function() {
-	require('./app.js')
+    require('./app.js')
 })
 ```
 
+#### app.js
+```js
+var express = require('express')
+var app = expres()
+
+var Pet = global.models.pet
+var PetFood = global.models.pet_food
+var Owner = global.models.owner
+
+app.get('/pets', function(req, res, next) {
+    Pet.find()
+    .then(res.json)
+    .catch(next) // Don't forget to handle possible errors and pass them to express
+})
+```
+
+This is a typical dev/fast config. It will load the models at `./models` into
+the global object and the memory adapter will be used if available. If the memory
+adapter is not available at the initialization will fail, so you know you need to
+install it
+
 ### Express
-*TODO*
+#### app.js
+```js
+var express = require('express')
+var WaterlineLighter = require('waterline-lighter')
+var app = expres()
+
+app.use(WaterlineLighter.middleware({
+    dir: './models',
+    connections: {
+        default: {
+            adapter: 'mysql',
+            url: 'mysql2://root:root@localhost:3306/database'
+        }
+    }
+}))
+
+app.get('/pets', function(req, res, next) {
+    var Pet = req.app.models.pet // req.app === app
+    var PetFood = req.app.models.pet_food
+    var Owner = req.app.models.owner
+
+    Pet.find()
+    .then(res.json)
+    .catch(next) // Don't forget to handle possible errors and pass them to express
+})
+```
