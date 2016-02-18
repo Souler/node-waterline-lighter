@@ -4,31 +4,35 @@ const fs        = require('fs')
   ,   _         = require('lodash')
   ,   Promise   = require('bluebird')
   ,   Waterline = require('waterline')
-  ,   memory    = null
-  ,   disk      = null
   ,   readdir   = Promise.promisify(fs.readdir)
 
 // Optional dependencies
-try {
-    memory = require('sails-memory')
-    disk   = require('sails-disk')
-} catch(e) {}
+const peer   = require('codependency').register(module)
+  ,   disk   = peer('sails-disk', { optional: true })
+  ,   memory = peer('sails-memory', { optional: true })
 
 const defaultConfig = {
     directory: null,
     target: global,
-    adapters: {
-        memory: memory ? memory : undefined,
-        disk: disk ? disk : undefined,
-    },
+    adapters: {},
     connections: {
         default: {
-            adapter: 'memory'
+            adapter: null
         }
     }
 }
 
-module.exports = function(_config, cb) {
+if (memory != null) {
+    defaultConfig.adapters['memory'] = memory
+    defaultConfig.connections.default.adapter = 'memory'
+}
+
+if (disk != null) {
+    defaultConfig.adapters['disk'] = disk
+    defaultConfig.connections.default.adapter = 'disk'
+}
+
+Waterline.Lighter = function(_config, cb) {
     if (_.isString(_config))
         _config = { directory: _config }
 
@@ -43,11 +47,11 @@ module.exports = function(_config, cb) {
     let orm = new Waterline()
     let config = _.assign({}, defaultConfig, _config)
     let ormConfig = _.omit(config, [ 'directory', 'target' ])
-    let ormInitialize = Promise.promisify(orm.initialize)
+    let ormInitialize = Promise.promisify(orm.initialize, { context: orm })
 
     return readdir(config.directory)
-    .then((files) => (
-        files
+    .then((files) => {
+        let p = files
         .filter((f) => (/\.js$/.test(f)))
         .map((f) => {
             let file = path.join(config.directory, f)
@@ -59,9 +63,11 @@ module.exports = function(_config, cb) {
                 model.identity = name
             return model
         })
-        .map(Waterline.Collection.extend)
-        .map(orm.loadCollection)        
-    ))
+        .map((m) => (Waterline.Collection.extend(m)))
+        .map((m) => (orm.loadCollection(m)))
+
+        return Promise.all(p)
+    })
     .then(() => (ormInitialize(ormConfig)))
     .then((models) => {
         let result = _.assign({ orm, config }, models)
@@ -75,3 +81,5 @@ module.exports = function(_config, cb) {
             return result
     })
 }
+
+module.exports = Waterline.Lighter
