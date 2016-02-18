@@ -81,6 +81,12 @@ Waterline.Lighter = function(_config, cb) {
         else
             return result
     })
+    .catch((error) => {
+        if (_.isFunction(cb))
+            return cb(error)
+        else
+            throw error
+    })
 }
 
 module.exports = Waterline.Lighter
