@@ -10,51 +10,75 @@ const fs        = require('fs')
   ,   peer      = require('codependency').register(module)
   ,   readdir   = Promise.promisify(fs.readdir)
 
-const adapters = [
-    'sails-postgresql',
-    'sails-mysql',
-    'sails-mongo',
-    'sails-memory',
-    'sails-disk',
-    'sails-sqlserver',
-    'sails-redis',
-    'sails-riak',
-    'sails-irc',
-    'sails-twitter',
-    'sails-jsdom',
-    'sails-neo4j',
-    'sails-orientdb',
-    'sails-arangodb',
-    'sails-cassandra',
-    'sails-graphql',
-    'sails-solr'
-]
+const defaultConfig = {
+    dir: null,
+    target: global,
+    adapters: {},
+    connections: {}
+}
 
-adapters.forEach((a) => {
-    let adapter = peer(a, { optional: true })
-    let name = a.replace(/^sails\-/, '')
+const adapters = [
+    'postgresql',
+    'mysql',
+    'mongo',
+    'memory',
+    'disk',
+    'sqlserver',
+    'redis',
+    'riak',
+    'irc',
+    'twitter',
+    'jsdom',
+    'neo4j',
+    'orientdb',
+    'arangodb',
+    'cassandra',
+    'graphql',
+    'solr'
+]
+.forEach((name) => {
+    let adapter = peer('sails-' + name, { optional: true })
     if (adapter != null)
         defaultConfig.adapters[name] = adapter
 })
 
-if (memory != null) {
-    defaultConfig.adapters['memory'] = memory
-    defaultConfig.connections.default.adapter = 'memory'
-}
-
 const ormCache = {}
 
-const WaterlineLighter = function(_config, cb) {
+const buildConfig = function(_config) {
     if (_.isString(_config))
-        _config = { directory: _config }
+        _config = { dir: _config }
 
-    if (!_config.directory) {
-        let err = TypeError('First argument must be the path to the models directory or an object with a directory attribute')
-        if (_.isFunction(cb))
-            return cb(err)
-        else
-            return Promise.reject(err)
+    if (!_config.dir) {
+        throw TypeError('First argument must be the path to the models directory or an object with a dir attribute')
+
+    let config = _.assign({}, defaultConfig, _config)
+
+    if (config.connection) {
+        if (config.connections.default)
+            throw Error('connections.default and connection should not be both defined')
+        config.connections.default = config.connection
+        config.connection = undefined
     }
+
+    if (_.isEmpty(config.connections)) {
+        config.connections.default = { adapter: 'memory' }
+    }
+
+    _.values(config.connections).each((c) => {
+        if (!c.adapter)
+            throw TypeError('connection must contain an adapter field')
+        if (!defaultConfig.adapters[c.adapter])
+            throw Error('Default sails-memory adapter could\'t be loaded. Run "npm i sails-' + c.adapter + '"')
+    })
+
+    // config.orm is what will be passed to Waterline#initialize
+    // so keep it clean
+    config.orm = _.omit(config, [ 'dir', 'target', 'connection' ])
+
+    return config
+}
+
+const WaterlineLighter = function(_config, cb) {
 
     let hash = objHash(_config)
     let cached = ormCache[hash]
@@ -62,11 +86,17 @@ const WaterlineLighter = function(_config, cb) {
     if (cached)
         return Promise.resolve(cached)
 
+    let config = null;
+
+    try {
+        config = buildConfig(_config)
+    } catch(err) {
+        return Promise.reject(err)
+    }
+
     let orm = new Waterline()
-    let config = _.assign({}, defaultConfig, _config)
-    let ormConfig = _.omit(config, [ 'dir', 'directory', 'target', 'adapter' ])
     let ormInitialize = Promise.promisify(orm.initialize, { context: orm })
-    let dir = path.join(path.dirname(module.parent.filename), config.directory || config.dir)
+    let dir = path.join(path.dirname(module.parent.filename), config.dir)
 
     return readdir(dir)
     .then((files) => {
@@ -87,7 +117,7 @@ const WaterlineLighter = function(_config, cb) {
 
         return Promise.all(p)
     })
-    .then(() => (ormInitialize(ormConfig)))
+    .then(() => (ormInitialize(config.orm)))
     .then((models) => {
         let result = _.assign({ orm, config }, models)
 
