@@ -102,10 +102,10 @@ WaterlineLighter('./models')
 .then(function(waterline) {
     waterline.orm           // waterline instance created by `new Waterline()`
     waterline.config        // config passed to orm.initialize (with some extra opts)
-    waterline.models        // models loaded on the orm after inited
+    waterline.collections   // collections loaded on the orm after inited
     waterline.connections   // connections used by the orm after inited
-    // The module also loads the models and collections into the global object
-    global.models           // same as waterline.models
+    // The module also loads the connections and collections into the global object
+    global.collections      // same as waterline.collections
     global.connections      // same as waterline.connections
 })
 .then(function() {
@@ -118,9 +118,9 @@ WaterlineLighter('./models')
 var express = require('express')
 var app = expres()
 
-var Pet = global.models.pet
-var PetFood = global.models.pet_food
-var Owner = global.models.owner
+var Pet = global.collections.pet
+var PetFood = global.collections.pet_food
+var Owner = global.collections.owner
 
 app.get('/pets', function(req, res, next) {
     Pet.find()
@@ -150,9 +150,9 @@ app.use(WaterlineLighter.middleware({
 }))
 
 app.get('/pets', function(req, res, next) {
-    var Pet = req.app.models.pet // req.app === app
-    var PetFood = req.app.models.pet_food
-    var Owner = req.app.models.owner
+    var Pet = req.app.collections.pet // req.app === app
+    var PetFood = req.app.collections.pet_food
+    var Owner = req.app.collections.owner
 
     Pet.find()
     .then(res.json)
