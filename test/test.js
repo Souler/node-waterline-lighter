@@ -1,6 +1,6 @@
-const should           = require('should')
-const Waterline        = require('waterline')
-const WaterlineLighter = require('../')
+var should           = require('should')
+var Waterline        = require('waterline')
+var WaterlineLighter = require('../')
 
 describe('WaterlineLighter', function() {
     it('should be a function', function() {
