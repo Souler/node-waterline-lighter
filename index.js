@@ -4,7 +4,7 @@ const fs        = require('fs')
   ,   path      = require('path')
   ,   _         = require('lodash')
   ,   objHash   = require('object-hash')
-  ,   case      = require('snake-case')
+  ,   sCase     = require('snake-case')
   ,   Promise   = require('bluebird')
   ,   Waterline = require('waterline')
   ,   peer      = require('codependency').register(module)
@@ -109,7 +109,7 @@ const WaterlineLighter = function(_config, cb) {
             if (!model.connection)
                 model.connection = 'default'
             if (!model.identity)
-                model.identity = case(name)
+                model.identity = sCase(name)
             return model
         })
         .map((m) => (Waterline.Collection.extend(m)))
