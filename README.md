@@ -3,6 +3,8 @@
 [![npm version](https://badge.fury.io/js/waterline-lighter.svg)](https://badge.fury.io/js/waterline-lighter)
 [![Build Status](https://travis-ci.org/Souler/node-waterline-lighter.svg?branch=master)](https://travis-ci.org/Souler/node-waterline-lighter)
 
+[![NPM](https://nodei.co/npm-dl/waterline-lighter.png?months=3)](https://nodei.co/npm/waterline-lighter/)
+
 # node-waterline-lighter
 Simple Waterline bootstraper for loading all the models in a given directory
 
